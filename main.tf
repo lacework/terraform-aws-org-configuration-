@@ -43,17 +43,25 @@ resource "aws_s3_bucket_public_access_block" "lacework_org_lambda" {
  }
 
 resource "aws_lambda_function" "lacework_copy_zip_files" {
-  description   = "Copies object from the Lacework S3 bucket to a new location"
-  filename      = "lambda.zip"
-  function_name = "lacework_copy_zip_files"
-  handler       = "index.handler"
-  role          = aws_iam_role.lacework_copy_zip_files_role.arn
-  runtime       = "python3.11"
-  timeout       = 240
+  description      = "Copies object from the Lacework S3 bucket to a new location"
+  filename         = data.archive_file.lambda_zip_file.output_path
+  function_name    = "lacework_copy_zip_files"
+  handler          = "index.handler"
+  role             = aws_iam_role.lacework_copy_zip_files_role.arn
+  runtime          = "python3.11"
+  source_code_hash = data.archive_file.lambda_zip_file.output_base64sha256
+  timeout          = 240
 
   tracing_config {
     mode = "Active"
   }
+}
+
+data "archive_file" "lambda_zip_file" {
+  output_path = "${path.module}/lambda.zip"
+  source_dir  = "${path.module}/python"
+  excludes    = ["__init__.py", "*.pyc"]
+  type        = "zip"
 }
 
 resource "aws_iam_role" "lacework_copy_zip_files_role" {
@@ -94,6 +102,22 @@ data "aws_iam_policy_document" "lacework_copy_zip_files_role" {
   }
 
   version = "2012-10-17"
+}
+
+data "aws_lambda_invocation" "lacework_copy_zip_files" {
+  function_name = aws_lambda_function.lacework_copy_zip_files.id
+
+  input = <<JSON
+{
+  "RequestType": "Copy",
+  "ResourceProperties": {
+    "SourceBucket": ${var.s3_bucket},
+    "DestBucket": aws_s3_bucket.lacework_org_lambda.id,
+    "Prefix": ${var.s3_prefix},
+    "Objects": ["/lambda/LaceworkIntegrationSetup1.1.2.zip"]
+  }
+}
+JSON
 }
 
 resource "aws_lambda_function" "lacework_setup_function" {
