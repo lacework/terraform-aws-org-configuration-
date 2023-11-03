@@ -15,7 +15,9 @@ terraform {
 
 provider "lacework" {}
 
-provider "aws" {}
+provider "aws" {
+  region = "us-west-2"
+}
 
 module "aws_org_configuration" {
     source = "../../"

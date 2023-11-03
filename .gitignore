@@ -1,0 +1,6 @@
+*.zip
+
+.terraform*
+.terraform
+
+terraform.tfstate*
