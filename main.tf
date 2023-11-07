@@ -1,14 +1,16 @@
 locals {
-    account_id  = data.aws_caller_identity.current.account_id
-    external_id = "lweid:aws:v2:${var.lacework_account}:${local.account_id}:${random_id.uniq.id}"
-    kms_key_arn = (length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn)
-    stack_name  = "lacework-aws-org-configuration"
+    account_id      = data.aws_caller_identity.current.account_id
+    external_id     = "lweid:aws:v2:${local.lacework_tenant}:${local.account_id}:${random_string.uniq.id}"
+    lacework_tenant = length(var.lacework_sub_account) > 0 ? var.lacework_sub_account : var.lacework_account
+    kms_key_arn     = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
+    stack_name      = "lacework-aws-org-configuration"
 }
 
 data "aws_caller_identity" "current" {}
 
-resource "random_id" "uniq" {
-  byte_length = 10
+resource "random_string" "uniq" {
+  length  = 10
+  special = false
 }
 
 #tfsec:ignore:aws-s3-enable-bucket-encryption
@@ -75,7 +77,7 @@ data "archive_file" "lambda_zip_file" {
 }
 
 resource "aws_iam_role" "lacework_copy_zip_files_role" {
-  assume_role_policy  =  data.aws_iam_policy_document.lacework_copy_zip_files_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.lacework_copy_zip_files_assume_role.json
 
   inline_policy {
     name   = "zip-role"
@@ -190,11 +192,16 @@ data "aws_iam_policy_document" "lacework_setup_function_assume_role" {
 data "aws_iam_policy_document" "lacework_setup_function_role" {
   statement {
     actions   = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
       "secretsmanager:GetSecretValue",
       "secretsmanager:UpdateSecret"
     ]
     effect    = "Allow"
-    resources = [aws_secretsmanager_secret.lacework_api_credentials.arn]
+    resources = [
+      aws_secretsmanager_secret.lacework_api_credentials.arn,
+      local.kms_key_arn,
+    ]
   }
 
   version = "2012-10-17"
@@ -294,8 +301,8 @@ resource "aws_cloudformation_stack" "lacework_stack" {
     MainAccountSNS     = aws_sns_topic.lacework_sns_topic.arn
     ResourceNamePrefix = var.resource_prefix
   }
-  template_url = "https://s3.amazonaws.com/${var.s3_bucket}/${var.s3_prefix}/templates/lacework-aws-cfg-member.template.yml" 
-  timeout_in_minutes = 5
+  template_url       = "https://s3.amazonaws.com/${var.s3_bucket}/${var.s3_prefix}/templates/lacework-aws-cfg-member.template.yml" 
+  timeout_in_minutes = 30
 
   depends_on = [ aws_lambda_function.lacework_setup_function ]
 }
