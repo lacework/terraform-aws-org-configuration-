@@ -1,21 +1,24 @@
 locals {
-    account_id  = data.aws_caller_identity.current.account_id
-    external_id = "lweid:aws:v2:${var.lacework_account}:${local.account_id}:${random_id.uniq.id}"
-    kms_key_arn = (length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn)
-    stack_name  = "lacework-aws-org-configuration"
+    account_id      = data.aws_caller_identity.current.account_id
+    external_id     = "lweid:aws:v2:${local.lacework_tenant}:${local.account_id}:${random_string.uniq.id}"
+    lacework_tenant = length(var.lacework_sub_account) > 0 ? var.lacework_sub_account : var.lacework_account
+    kms_key_arn     = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
+    stack_name      = "lacework-aws-org-configuration"
 }
 
 data "aws_caller_identity" "current" {}
 
-resource "random_id" "uniq" {
-  byte_length = 10
+resource "random_string" "uniq" {
+  length  = 10
+  special = false
 }
 
 #tfsec:ignore:aws-s3-enable-bucket-encryption
 #tfsec:ignore:aws-s3-enable-bucket-logging
 #tfsec:ignore:aws-s3-encryption-customer-key
 resource "aws_s3_bucket" "lacework_org_lambda" {
-  bucket = "lacework_org_lambda"
+  bucket_prefix = "lacework-org-lambda-"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_versioning" "lacework_org_lambda" {
@@ -55,69 +58,80 @@ resource "aws_lambda_function" "lacework_copy_zip_files" {
   tracing_config {
     mode = "Active"
   }
+
+  environment {
+    variables = {
+      src_bucket = var.s3_bucket
+      dst_bucket = aws_s3_bucket.lacework_org_lambda.id
+      prefix     = var.s3_prefix
+      object     = "/lambda/LaceworkIntegrationSetup1.1.2.zip"
+    }
+  }
 }
 
 data "archive_file" "lambda_zip_file" {
+  excludes    = ["__init__.py", "*.pyc"]
   output_path = "${path.module}/lambda.zip"
   source_dir  = "${path.module}/python"
-  excludes    = ["__init__.py", "*.pyc"]
   type        = "zip"
 }
 
 resource "aws_iam_role" "lacework_copy_zip_files_role" {
-  assume_role_policy  = data.aws_iam_policy_document.lacework_setup_function_role.json
+  assume_role_policy = data.aws_iam_policy_document.lacework_copy_zip_files_assume_role.json
+
+  inline_policy {
+    name   = "zip-role"
+    policy = data.aws_iam_policy_document.lacework_copy_zip_files_role.json
+  }
+
   managed_policy_arns = ["arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"]
   name                = "lacework_copy_zip_files_role"
   path                = "/"
 }
 
-data "aws_iam_policy_document" "lacework_copy_zip_files_role" {
+data "aws_iam_policy_document" "lacework_copy_zip_files_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
-    effect  = "Allow"
 
     principals {
       type        = "Service"
       identifiers = ["lambda.amazonaws.com"]
     }
   }
+}
 
+data "aws_iam_policy_document" "lacework_copy_zip_files_role" {
   statement {
     actions   = [
       "s3:GetObject",
       "s3:GetObjectTagging",
     ]
     effect    = "Allow"
-    resources = ["aws:${data.aws_partition.current.partition}:s3:::${var.s3_bucket}/${var.s3_prefix}*"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:s3:::${var.s3_bucket}/${var.s3_prefix}/*"
+    ]
   }
 
   statement {
     actions   = [
-      "s3:DeleteObject",
-      "s3:PutObject",
-      "s3:PutObjectTagging",
+      "s3:*",
     ]
     effect    = "Allow"
-    resources = [aws_s3_bucket.lacework_org_lambda.arn]
+    resources = [
+      aws_s3_bucket.lacework_org_lambda.arn,
+      "${aws_s3_bucket.lacework_org_lambda.arn}/*",
+    ]
   }
 
   version = "2012-10-17"
 }
 
-data "aws_lambda_invocation" "lacework_copy_zip_files" {
-  function_name = aws_lambda_function.lacework_copy_zip_files.id
+resource "aws_lambda_invocation" "lacework_copy_zip_files" {
+  function_name = aws_lambda_function.lacework_copy_zip_files.arn
 
-  input = <<JSON
-{
-  "RequestType": "Copy",
-  "ResourceProperties": {
-    "SourceBucket": ${var.s3_bucket},
-    "DestBucket": aws_s3_bucket.lacework_org_lambda.id,
-    "Prefix": ${var.s3_prefix},
-    "Objects": ["/lambda/LaceworkIntegrationSetup1.1.2.zip"]
-  }
-}
-JSON
+  input = jsonencode({})
+
+  depends_on = [ aws_lambda_function.lacework_copy_zip_files ]
 }
 
 resource "aws_lambda_function" "lacework_setup_function" {
@@ -133,17 +147,29 @@ resource "aws_lambda_function" "lacework_setup_function" {
   handler       = "lw_integration_lambda_function.handler"
   role          = aws_iam_role.lacework_setup_function_role.arn
   runtime       = "python3.11"
-  s3_bucket     = aws_s3_bucket.lacework_org_lambda.arn
+  s3_bucket     = aws_s3_bucket.lacework_org_lambda.bucket
   s3_key        = "${var.s3_prefix}/lambda/LaceworkIntegrationSetup1.1.2.zip"
   timeout       = 900
 
   tracing_config {
     mode = "Active"
   }
+
+  depends_on = [
+    aws_lambda_invocation.lacework_copy_zip_files,
+    aws_sns_topic.lacework_sns_topic,
+    aws_secretsmanager_secret.lacework_api_credentials
+  ]
 }
 
 resource "aws_iam_role" "lacework_setup_function_role" {
-  assume_role_policy  = data.aws_iam_policy_document.lacework_setup_function_role.json
+  assume_role_policy = data.aws_iam_policy_document.lacework_setup_function_assume_role.json
+
+  inline_policy {
+    name   = "lacework_setup_function_policy"
+    policy = data.aws_iam_policy_document.lacework_setup_function_role.json
+  }
+
   managed_policy_arns = ["arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"]
   name                = "lacework_setup_function_role"
   path                = "/"
@@ -151,7 +177,7 @@ resource "aws_iam_role" "lacework_setup_function_role" {
 
 data "aws_partition" "current" {}
 
-data "aws_iam_policy_document" "lacework_setup_function_role" {
+data "aws_iam_policy_document" "lacework_setup_function_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
     effect  = "Allow"
@@ -161,14 +187,21 @@ data "aws_iam_policy_document" "lacework_setup_function_role" {
       identifiers = ["lambda.amazonaws.com"]
     }
   }
+}
 
+data "aws_iam_policy_document" "lacework_setup_function_role" {
   statement {
     actions   = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
       "secretsmanager:GetSecretValue",
       "secretsmanager:UpdateSecret"
     ]
     effect    = "Allow"
-    resources = [aws_secretsmanager_secret.lacework_api_credentials.arn]
+    resources = [
+      aws_secretsmanager_secret.lacework_api_credentials.arn,
+      local.kms_key_arn,
+    ]
   }
 
   version = "2012-10-17"
@@ -177,14 +210,15 @@ data "aws_iam_policy_document" "lacework_setup_function_role" {
 resource "aws_lambda_permission" "lacework_lambda_permission" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.lacework_setup_function.arn
-  principal     = "cloudformation.amazonaws.com"
+  principal     = "sns.amazonaws.com"
   source_arn    = aws_sns_topic.lacework_sns_topic.arn 
 }
 
 resource "aws_secretsmanager_secret" "lacework_api_credentials" {
-  description = "Lacework API Access Keys"
-  name        = "LaceworkApiCredentials"
-  kms_key_id  = local.kms_key_arn
+  description             = "Lacework API Access Keys"
+  kms_key_id              = local.kms_key_arn
+  name                    = "LaceworkApiCredentials"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "lacework_api_credentials" {
@@ -225,7 +259,7 @@ data "aws_iam_policy_document" "kms_key_policy" {
 }
 
 resource "aws_sns_topic_policy" "default" {
-  arn    = ""
+  arn    = aws_sns_topic.lacework_sns_topic.arn
   policy = data.aws_iam_policy_document.sns_topic_policy.json
 }
 
@@ -267,7 +301,10 @@ resource "aws_cloudformation_stack" "lacework_stack" {
     MainAccountSNS     = aws_sns_topic.lacework_sns_topic.arn
     ResourceNamePrefix = var.resource_prefix
   }
-  template_url = "https://s3.amazonaws.com/${var.s3_bucket}/${var.s3_prefix}/templates/lacework-aws-cfg-member.template.yml" 
+  template_url       = "https://s3.amazonaws.com/${var.s3_bucket}/${var.s3_prefix}/templates/lacework-aws-cfg-member.template.yml" 
+  timeout_in_minutes = 30
+
+  depends_on = [ aws_lambda_function.lacework_setup_function ]
 }
 
 resource "aws_cloudformation_stack_set" "lacework_stackset" {
@@ -292,4 +329,6 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
 
   permission_model = "SERVICE_MANAGED"
   template_url     = "https://s3.amazonaws.com/${var.s3_bucket}/${var.s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
+
+  depends_on = [ aws_lambda_function.lacework_setup_function ]
 }
