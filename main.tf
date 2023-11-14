@@ -247,6 +247,28 @@ data "aws_iam_policy_document" "kms_key_policy" {
     actions   = ["kms:*"]
     resources = ["*"]
   }
+  statement {
+    sid    = "Enable Org member accounts to use key"
+    effect = "Allow"
+
+    principals {
+      type        = "AWS"
+      identifiers = ["*"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalOrgID"
+      values   = [var.organization_id]
+    }
+
+    actions = [
+      "kms:GenerateDataKey",
+      "kms:Decrypt"
+    ]
+
+    resources = ["*"]
+  }
 }
 
 resource "aws_sns_topic_policy" "default" {
@@ -258,11 +280,13 @@ data "aws_iam_policy_document" "sns_topic_policy" {
   policy_id = "lwSNStopicpolicy"
 
   statement {
-    actions = ["sns:Publish"]
+    actions = [
+      "sns:Publish",
+    ]
 
     condition {
       test     = "StringEquals"
-      variable = "aws:PrincipleOrgID"
+      variable = "aws:PrincipalOrgID"
       values   = [var.organization_id]
     }
 
@@ -295,7 +319,15 @@ resource "aws_cloudformation_stack" "lacework_stack" {
   template_url       = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
   timeout_in_minutes = 30
 
-  depends_on = [aws_lambda_function.lacework_setup_function]
+  depends_on = [ // depending on all this ensures the stack can be torn down
+    aws_s3_bucket.lacework_org_lambda,
+    aws_sns_topic.lacework_sns_topic,
+    aws_sns_topic_subscription.lacework_sns_subscription,
+    aws_sns_topic_policy.default,
+    aws_lambda_permission.lacework_lambda_permission,
+    aws_secretsmanager_secret.lacework_api_credentials,
+    aws_lambda_function.lacework_setup_function
+  ]
 }
 
 resource "aws_cloudformation_stack_set" "lacework_stackset" {
@@ -321,5 +353,25 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
   permission_model = "SERVICE_MANAGED"
   template_url     = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
 
-  depends_on = [aws_lambda_function.lacework_setup_function]
+
+  depends_on = [ // depending on all this ensures the stackinstances can be torn down
+    aws_s3_bucket.lacework_org_lambda,
+    aws_sns_topic.lacework_sns_topic,
+    aws_sns_topic_subscription.lacework_sns_subscription,
+    aws_sns_topic_policy.default,
+    aws_lambda_permission.lacework_lambda_permission,
+    aws_secretsmanager_secret.lacework_api_credentials,
+    aws_lambda_function.lacework_setup_function
+  ]
+}
+
+
+data "aws_region" "current" {}
+resource "aws_cloudformation_stack_set_instance" "lacework_stackset_instances" {
+  deployment_targets {
+    organizational_unit_ids = [var.organization_unit]
+  }
+
+  region         = data.aws_region.current.name
+  stack_set_name = aws_cloudformation_stack_set.lacework_stackset.name
 }
