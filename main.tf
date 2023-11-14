@@ -1,7 +1,6 @@
 locals {
     account_id      = data.aws_caller_identity.current.account_id
-    external_id     = "lweid:aws:v2:${local.lacework_tenant}:${local.account_id}:${random_string.uniq.id}"
-    lacework_tenant = length(var.lacework_sub_account) > 0 ? var.lacework_sub_account : var.lacework_account
+    external_id     = "lweid:aws:v2:${var.lacework_account}:${local.account_id}:${random_string.uniq.id}"
     kms_key_arn     = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
     stack_name      = "lacework-aws-org-configuration"
 }
