@@ -1,16 +1,8 @@
 locals {
-    account_id      = data.aws_caller_identity.current.account_id
-    external_id     = "lweid:aws:v2:${var.lacework_account}:${local.account_id}:${random_string.uniq.id}"
-    kms_key_arn     = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
-    stack_name      = "lacework-aws-org-configuration"
+  kms_key_arn = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
 }
 
 data "aws_caller_identity" "current" {}
-
-resource "random_string" "uniq" {
-  length  = 10
-  special = false
-}
 
 #tfsec:ignore:aws-s3-enable-bucket-encryption
 #tfsec:ignore:aws-s3-enable-bucket-logging
@@ -42,7 +34,7 @@ resource "aws_s3_bucket_public_access_block" "lacework_org_lambda" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
- }
+}
 
 resource "aws_lambda_function" "lacework_copy_zip_files" {
   description      = "Copies object from the Lacework S3 bucket to a new location"
@@ -60,9 +52,9 @@ resource "aws_lambda_function" "lacework_copy_zip_files" {
 
   environment {
     variables = {
-      src_bucket = var.s3_bucket
+      src_bucket = var.cf_s3_bucket
       dst_bucket = aws_s3_bucket.lacework_org_lambda.id
-      prefix     = var.s3_prefix
+      prefix     = var.cf_s3_prefix
       object     = "/lambda/LaceworkIntegrationSetup1.1.2.zip"
     }
   }
@@ -101,21 +93,21 @@ data "aws_iam_policy_document" "lacework_copy_zip_files_assume_role" {
 
 data "aws_iam_policy_document" "lacework_copy_zip_files_role" {
   statement {
-    actions   = [
+    actions = [
       "s3:GetObject",
       "s3:GetObjectTagging",
     ]
-    effect    = "Allow"
+    effect = "Allow"
     resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::${var.s3_bucket}/${var.s3_prefix}/*"
+      "arn:${data.aws_partition.current.partition}:s3:::${var.cf_s3_bucket}/${var.cf_s3_prefix}/*"
     ]
   }
 
   statement {
-    actions   = [
+    actions = [
       "s3:*",
     ]
-    effect    = "Allow"
+    effect = "Allow"
     resources = [
       aws_s3_bucket.lacework_org_lambda.arn,
       "${aws_s3_bucket.lacework_org_lambda.arn}/*",
@@ -130,7 +122,7 @@ resource "aws_lambda_invocation" "lacework_copy_zip_files" {
 
   input = jsonencode({})
 
-  depends_on = [ aws_lambda_function.lacework_copy_zip_files ]
+  depends_on = [aws_lambda_function.lacework_copy_zip_files]
 }
 
 resource "aws_lambda_function" "lacework_setup_function" {
@@ -138,7 +130,7 @@ resource "aws_lambda_function" "lacework_setup_function" {
     variables = {
       LW_ACCOUNT     = var.lacework_account
       LW_INT_PREFIX  = "AWS"
-      LW_SUB_ACCOUNT = var.lacework_sub_account
+      LW_SUB_ACCOUNT = var.lacework_subaccount
     }
   }
 
@@ -147,7 +139,7 @@ resource "aws_lambda_function" "lacework_setup_function" {
   role          = aws_iam_role.lacework_setup_function_role.arn
   runtime       = "python3.11"
   s3_bucket     = aws_s3_bucket.lacework_org_lambda.bucket
-  s3_key        = "${var.s3_prefix}/lambda/LaceworkIntegrationSetup1.1.2.zip"
+  s3_key        = "${var.cf_s3_prefix}/lambda/LaceworkIntegrationSetup1.1.2.zip"
   timeout       = 900
 
   tracing_config {
@@ -190,13 +182,13 @@ data "aws_iam_policy_document" "lacework_setup_function_assume_role" {
 
 data "aws_iam_policy_document" "lacework_setup_function_role" {
   statement {
-    actions   = [
+    actions = [
       "kms:Decrypt",
       "kms:GenerateDataKey",
       "secretsmanager:GetSecretValue",
       "secretsmanager:UpdateSecret"
     ]
-    effect    = "Allow"
+    effect = "Allow"
     resources = [
       aws_secretsmanager_secret.lacework_api_credentials.arn,
       local.kms_key_arn,
@@ -210,7 +202,7 @@ resource "aws_lambda_permission" "lacework_lambda_permission" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.lacework_setup_function.arn
   principal     = "sns.amazonaws.com"
-  source_arn    = aws_sns_topic.lacework_sns_topic.arn 
+  source_arn    = aws_sns_topic.lacework_sns_topic.arn
 }
 
 resource "aws_secretsmanager_secret" "lacework_api_credentials" {
@@ -222,7 +214,7 @@ resource "aws_secretsmanager_secret" "lacework_api_credentials" {
 
 resource "aws_secretsmanager_secret_version" "lacework_api_credentials" {
   secret_id     = aws_secretsmanager_secret.lacework_api_credentials.id
-  secret_string = "{\"AccessKeyID\": \"${var.lacework_access_key_id}\", \"SecretKey\": \"${var.lacework_secret_key}\", \"AccessToken\": \"0\", \"TokenExpiry\": 0}"
+  secret_string = "{\"AccessKeyID\": \"${var.lacework_access_key_id}\", \"SecretKey\": \"${var.lacework_access_secret_key}\", \"AccessToken\": \"0\", \"TokenExpiry\": 0}"
 }
 
 resource "aws_sns_topic" "lacework_sns_topic" {
@@ -249,7 +241,7 @@ data "aws_iam_policy_document" "kms_key_policy" {
 
     principals {
       type        = "AWS"
-      identifiers = ["arn:aws:iam::${local.account_id}:root"]
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
     }
 
     actions   = ["kms:*"]
@@ -271,7 +263,7 @@ data "aws_iam_policy_document" "sns_topic_policy" {
     condition {
       test     = "StringEquals"
       variable = "aws:PrincipleOrgID"
-      values   = [ var.organization_id ]
+      values   = [var.organization_id]
     }
 
     effect = "Allow"
@@ -293,27 +285,27 @@ resource "aws_sns_topic_subscription" "lacework_sns_subscription" {
 }
 
 resource "aws_cloudformation_stack" "lacework_stack" {
-  capabilities = [ "CAPABILITY_NAMED_IAM" ]
-  name         = local.stack_name
-  parameters   = {
-    ExternalID         = local.external_id
+  capabilities = ["CAPABILITY_NAMED_IAM"]
+  name         = var.cf_stack_name
+  parameters = {
+    LaceworkAccount    = var.lacework_account
     MainAccountSNS     = aws_sns_topic.lacework_sns_topic.arn
-    ResourceNamePrefix = var.resource_prefix
+    ResourceNamePrefix = var.cf_resource_prefix
   }
-  template_url       = "https://s3.amazonaws.com/${var.s3_bucket}/${var.s3_prefix}/templates/lacework-aws-cfg-member.template.yml" 
+  template_url       = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
   timeout_in_minutes = 30
 
-  depends_on = [ aws_lambda_function.lacework_setup_function ]
+  depends_on = [aws_lambda_function.lacework_setup_function]
 }
 
 resource "aws_cloudformation_stack_set" "lacework_stackset" {
   auto_deployment {
-    enabled = true
+    enabled                          = true
     retain_stacks_on_account_removal = false
   }
 
-  capabilities = [ "CAPABILITY_NAMED_IAM" ]
-  name         = local.stack_name
+  capabilities = ["CAPABILITY_NAMED_IAM"]
+  name         = var.cf_stack_name
 
   operation_preferences {
     failure_tolerance_count   = 20
@@ -321,13 +313,13 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
   }
 
   parameters = {
-    ExternalID         = local.external_id
+    LaceworkAccount    = var.lacework_account
     MainAccountSNS     = aws_sns_topic.lacework_sns_topic.arn
-    ResourceNamePrefix = var.resource_prefix
+    ResourceNamePrefix = var.cf_resource_prefix
   }
 
   permission_model = "SERVICE_MANAGED"
-  template_url     = "https://s3.amazonaws.com/${var.s3_bucket}/${var.s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
+  template_url     = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
 
-  depends_on = [ aws_lambda_function.lacework_setup_function ]
+  depends_on = [aws_lambda_function.lacework_setup_function]
 }
