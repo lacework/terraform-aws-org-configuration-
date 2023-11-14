@@ -128,8 +128,8 @@ resource "aws_lambda_invocation" "lacework_copy_zip_files" {
 resource "aws_lambda_function" "lacework_setup_function" {
   environment {
     variables = {
-      LW_ACCOUNT     = var.lacework_account
-      LW_INT_PREFIX  = "AWS"
+      LW_ACCOUNT    = var.lacework_account
+      LW_INT_PREFIX = "AWS"
       LW_SUBACCOUNT = var.lacework_subaccount
     }
   }
@@ -214,7 +214,7 @@ resource "aws_secretsmanager_secret" "lacework_api_credentials" {
 
 resource "aws_secretsmanager_secret_version" "lacework_api_credentials" {
   secret_id     = aws_secretsmanager_secret.lacework_api_credentials.id
-  secret_string = "{\"AccessKeyID\": \"${var.lacework_access_key_id}\", \"SecretKey\": \"${var.lacework_access_secret_key}\", \"AccessToken\": \"0\", \"TokenExpiry\": 0}"
+  secret_string = "{\"AccessKeyID\": \"${var.lacework_access_key_id}\", \"SecretKey\": \"${var.lacework_secret_key}\", \"AccessToken\": \"0\", \"TokenExpiry\": 0}"
 }
 
 resource "aws_sns_topic" "lacework_sns_topic" {

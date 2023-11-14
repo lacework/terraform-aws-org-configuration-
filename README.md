@@ -70,8 +70,8 @@ No modules.
 | <a name="input_kms_key_multi_region"></a> [kms\_key\_multi\_region](#input\_kms\_key\_multi\_region) | Whether the KMS key is a multi-region or regional key | `bool` | `true` | no |
 | <a name="input_kms_key_rotation"></a> [kms\_key\_rotation](#input\_kms\_key\_rotation) | Enable KMS automatic key rotation | `bool` | `false` | no |
 | <a name="input_lacework_access_key_id"></a> [lacework\_access\_key\_id](#input\_lacework\_access\_key\_id) | n/a | `string` | n/a | yes |
-| <a name="input_lacework_access_secret_key"></a> [lacework\_access\_secret\_key](#input\_lacework\_access\_secret\_key) | n/a | `string` | n/a | yes |
 | <a name="input_lacework_account"></a> [lacework\_account](#input\_lacework\_account) | Lacework account name.  Do not include the '.lacework.net' at the end. | `string` | n/a | yes |
+| <a name="input_lacework_secret_key"></a> [lacework\_secret\_key](#input\_lacework\_secret\_key) | n/a | `string` | n/a | yes |
 | <a name="input_lacework_subaccount"></a> [lacework\_subaccount](#input\_lacework\_subaccount) | If Lacework Organizations is enabled, enter the sub-account.  Leave blank if Lacework Organizations is not enabled. | `string` | `""` | no |
 | <a name="input_organization_id"></a> [organization\_id](#input\_organization\_id) | AWS Organization ID where these resources are being deployed into | `string` | n/a | yes |
 | <a name="input_organization_unit"></a> [organization\_unit](#input\_organization\_unit) | Organizational Unit ID that the stackset will be deployed into | `string` | n/a | yes |

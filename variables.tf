@@ -22,11 +22,11 @@ variable "lacework_access_key_id" {
   }
 }
 
-variable "lacework_access_secret_key" {
+variable "lacework_secret_key" {
   type      = string
   sensitive = true
   validation {
-    condition     = can(regex("^[a-zA-Z0-9_]+$", var.lacework_access_secret_key))
+    condition     = can(regex("^[a-zA-Z0-9_]+$", var.lacework_secret_key))
     error_message = "Enter the Lacework API Secret Key. See https://support.lacework.com/hc/en-us/articles/360011403853-Generate-API-Access-Keys-and-Tokens."
   }
 }
