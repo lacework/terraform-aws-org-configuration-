@@ -130,7 +130,7 @@ resource "aws_lambda_function" "lacework_setup_function" {
     variables = {
       LW_ACCOUNT     = var.lacework_account
       LW_INT_PREFIX  = "AWS"
-      LW_SUB_ACCOUNT = var.lacework_subaccount
+      LW_SUBACCOUNT = var.lacework_subaccount
     }
   }
 
