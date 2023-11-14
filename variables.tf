@@ -8,7 +8,7 @@ variable "lacework_subaccount" {
   default     = ""
   description = "If Lacework Organizations is enabled, enter the sub-account.  Leave blank if Lacework Organizations is not enabled."
   validation {
-    condition     = can(regex("^$|^[a-zA-Z0-9.]+(?:-[a-zA-Z0-9.]+)*$", var.lacework_sub_account))
+    condition     = can(regex("^$|^[a-zA-Z0-9.]+(?:-[a-zA-Z0-9.]+)*$", var.lacework_subaccount))
     error_message = "Invalid Lacework account name entered. The account name may contain alphanumeric characters and dashes only."
   }
 }
@@ -26,7 +26,7 @@ variable "lacework_access_secret_key" {
   type      = string
   sensitive = true
   validation {
-    condition     = can(regex("^[a-zA-Z0-9_]+$", var.lacework_secret_key))
+    condition     = can(regex("^[a-zA-Z0-9_]+$", var.lacework_access_secret_key))
     error_message = "Enter the Lacework API Secret Key. See https://support.lacework.com/hc/en-us/articles/360011403853-Generate-API-Access-Keys-and-Tokens."
   }
 }
@@ -55,7 +55,7 @@ variable "cf_resource_prefix" {
   type        = string
   description = "Prefix for resources created by Lacework stackset"
   validation {
-    condition     = can(regex("^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$", var.resource_prefix))
+    condition     = can(regex("^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$", var.cf_resource_prefix))
     error_message = "Invalid resource name prefix.  Must match pattern ^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$"
   }
 }
