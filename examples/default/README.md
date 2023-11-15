@@ -5,30 +5,21 @@ This scenario integrates an AWS Organzation with Lacework for cloud resource con
 ## Sample Code
 
 ```hcl
-terraform {
-  required_providers {
-    lacework = {
-      source = "lacework/lacework"
-    }
-  }
-}
-
-provider "lacework" {}
-
 provider "aws" {
   region = "us-west-2"
 }
 
 module "aws_org_configuration" {
-    source = "../../"
+  source  = "lacework/org-configuration/aws"
+  version = "~> 0.1"
 
-    lacework_account       = "account"
-    lacework_sub_account   = "sub-account"
-    lacework_access_key_id = "accesskey"
-    lacework_secret_key    = "_secretkey"
-    organization_id        = "o-organizationid"
-    organization_unit      = "org-unit"
-    resource_prefix        = "prefix"
+  lacework_account       = "account"
+  lacework_subaccount    = "sub-account"
+  lacework_access_key_id = "accesskey"
+  lacework_secret_key    = "_secretkey"
+  organization_id        = "o-organizationid"
+  organization_unit      = "org-unit"
+  cf_resource_prefix     = "prefix"
 }
 ```
 
