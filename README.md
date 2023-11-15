@@ -76,7 +76,7 @@ No modules.
 | <a name="input_lacework_secret_key"></a> [lacework\_secret\_key](#input\_lacework\_secret\_key) | n/a | `string` | n/a | yes |
 | <a name="input_lacework_subaccount"></a> [lacework\_subaccount](#input\_lacework\_subaccount) | If Lacework Organizations is enabled, enter the sub-account.  Leave blank if Lacework Organizations is not enabled. | `string` | `""` | no |
 | <a name="input_organization_id"></a> [organization\_id](#input\_organization\_id) | AWS Organization ID where these resources are being deployed into | `string` | n/a | yes |
-| <a name="input_organization_unit"></a> [organization\_unit](#input\_organization\_unit) | Organizational Unit ID that the stackset will be deployed into | `string` | n/a | yes |
+| <a name="input_organization_unit"></a> [organization\_unit](#input\_organization\_unit) | Organizational Unit ID that the stackset will be deployed into | `list(string)` | n/a | yes |
 
 ## Outputs
 

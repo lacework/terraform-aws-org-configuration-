@@ -369,7 +369,7 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
 data "aws_region" "current" {}
 resource "aws_cloudformation_stack_set_instance" "lacework_stackset_instances" {
   deployment_targets {
-    organizational_unit_ids = [var.organization_unit]
+    organizational_unit_ids = var.organization_unit
   }
 
   region         = data.aws_region.current.name

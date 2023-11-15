@@ -41,7 +41,7 @@ variable "organization_id" {
 }
 
 variable "organization_unit" {
-  type        = string
+  type        = list(string)
   description = "Organizational Unit ID that the stackset will be deployed into"
 }
 
