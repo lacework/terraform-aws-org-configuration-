@@ -10,6 +10,6 @@ module "aws_org_configuration" {
   lacework_access_key_id = "accesskey"
   lacework_secret_key    = "_secretkey"
   organization_id        = "o-organizationid"
-  organization_unit      = "org-unit"
+  organization_unit      = ["org-unit"]
   cf_resource_prefix     = "prefix"
 }
