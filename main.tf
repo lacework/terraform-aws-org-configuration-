@@ -75,9 +75,11 @@ resource "aws_iam_role" "lacework_copy_zip_files_role" {
     policy = data.aws_iam_policy_document.lacework_copy_zip_files_role.json
   }
 
-  managed_policy_arns = ["arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"]
-  name                = "lacework_copy_zip_files_role"
-  path                = "/"
+  managed_policy_arns = [
+    "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  ]
+  name = "lacework_copy_zip_files_role"
+  path = "/"
 }
 
 data "aws_iam_policy_document" "lacework_copy_zip_files_assume_role" {
@@ -105,7 +107,9 @@ data "aws_iam_policy_document" "lacework_copy_zip_files_role" {
 
   statement {
     actions = [
-      "s3:*",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:PutObjectTagging",
     ]
     effect = "Allow"
     resources = [
