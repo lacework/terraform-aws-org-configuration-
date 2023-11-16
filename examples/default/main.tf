@@ -1,5 +1,3 @@
-provider "lacework" {}
-
 provider "aws" {
   region = "us-west-2"
 }
@@ -12,6 +10,6 @@ module "aws_org_configuration" {
   lacework_access_key_id = "accesskey"
   lacework_secret_key    = "_secretkey"
   organization_id        = "o-organizationid"
-  organization_unit      = "org-unit"
+  organization_unit      = ["ou-abcd-12345678"]
   cf_resource_prefix     = "prefix"
 }

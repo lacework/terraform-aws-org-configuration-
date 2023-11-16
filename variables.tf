@@ -36,7 +36,7 @@ variable "organization_id" {
   description = "AWS Organization ID where these resources are being deployed into"
   validation {
     condition     = can(regex("^o-[a-z0-9]{10,32}$", var.organization_id))
-    error_message = "Invalid AWS Organization ID"
+    error_message = "Invalid AWS Organization ID."
   }
 }
 
@@ -56,7 +56,7 @@ variable "cf_resource_prefix" {
   description = "Prefix for resources created by Lacework stackset"
   validation {
     condition     = can(regex("^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$", var.cf_resource_prefix))
-    error_message = "Invalid resource name prefix.  Must match pattern ^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$"
+    error_message = "Invalid resource name prefix.  Must match pattern '^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$'."
   }
 }
 
