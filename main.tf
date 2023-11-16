@@ -113,7 +113,7 @@ data "aws_iam_policy_document" "lacework_copy_zip_files_role" {
     ]
     effect = "Allow"
     resources = [
-      "${aws_s3_bucket.lacework_org_lambda.arn}/${var.cf_s3_prefix}/*",
+      aws_s3_bucket.lacework_org_lambda.arn,
     ]
   }
 
