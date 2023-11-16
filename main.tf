@@ -347,6 +347,12 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
   capabilities = ["CAPABILITY_NAMED_IAM"]
   name         = var.cf_stack_name
 
+  // GROW-2584: Workaround due to https://github.com/hashicorp/terraform-provider-aws/issues/23464
+  //            this block can be removed if there is a solution created for 23464 
+  lifecycle {
+    ignore_changes = [administration_role_arn]
+  }
+
   operation_preferences {
     failure_tolerance_count   = 20
     max_concurrent_percentage = 100
