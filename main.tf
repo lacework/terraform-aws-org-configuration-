@@ -113,8 +113,7 @@ data "aws_iam_policy_document" "lacework_copy_zip_files_role" {
     ]
     effect = "Allow"
     resources = [
-      aws_s3_bucket.lacework_org_lambda.arn,
-      "${aws_s3_bucket.lacework_org_lambda.arn}/*",
+      "${aws_s3_bucket.lacework_org_lambda.arn}/${var.cf_s3_prefix}/*",
     ]
   }
 
@@ -165,9 +164,11 @@ resource "aws_iam_role" "lacework_setup_function_role" {
     policy = data.aws_iam_policy_document.lacework_setup_function_role.json
   }
 
-  managed_policy_arns = ["arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"]
-  name                = "lacework_setup_function_role"
-  path                = "/"
+  managed_policy_arns = [
+    "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  ]
+  name = "lacework_setup_function_role"
+  path = "/"
 }
 
 data "aws_partition" "current" {}
