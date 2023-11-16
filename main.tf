@@ -1,5 +1,7 @@
 locals {
-  kms_key_arn = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
+  kms_key_arn   = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
+  lambda_zip    = "LaceworkIntegrationSetup1.1.2.zip"
+  s3_lambda_key = "${var.cf_s3_prefix}/lambda/${local.lambda_zip}"
 }
 
 data "aws_caller_identity" "current" {}
@@ -55,7 +57,7 @@ resource "aws_lambda_function" "lacework_copy_zip_files" {
       src_bucket = var.cf_s3_bucket
       dst_bucket = aws_s3_bucket.lacework_org_lambda.id
       prefix     = var.cf_s3_prefix
-      object     = "/lambda/LaceworkIntegrationSetup1.1.2.zip"
+      object     = "/lambda/${local.lambda_zip}"
     }
   }
 }
@@ -113,7 +115,7 @@ data "aws_iam_policy_document" "lacework_copy_zip_files_role" {
     ]
     effect = "Allow"
     resources = [
-      aws_s3_bucket.lacework_org_lambda.arn,
+      "${aws_s3_bucket.lacework_org_lambda.arn}/${local.s3_lambda_key}",
     ]
   }
 
@@ -129,6 +131,7 @@ resource "aws_lambda_invocation" "lacework_copy_zip_files" {
 }
 
 resource "aws_lambda_function" "lacework_setup_function" {
+  description = "Sends HTTP requests to Lacework APIs to manage integrations"
   environment {
     variables = {
       LW_ACCOUNT    = var.lacework_account
@@ -142,7 +145,7 @@ resource "aws_lambda_function" "lacework_setup_function" {
   role          = aws_iam_role.lacework_setup_function_role.arn
   runtime       = "python3.11"
   s3_bucket     = aws_s3_bucket.lacework_org_lambda.bucket
-  s3_key        = "${var.cf_s3_prefix}/lambda/LaceworkIntegrationSetup1.1.2.zip"
+  s3_key        = local.s3_lambda_key
   timeout       = 900
 
   tracing_config {
