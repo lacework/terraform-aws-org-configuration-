@@ -6,12 +6,10 @@
 #
 set -eou pipefail
 
-readonly project_name=terraform-aws-config
+readonly project_name=terraform-aws-org-configuration
 
 TEST_CASES=(
-  examples/custom-config
-  examples/default-config
-  examples/existing-iam-role-config
+  examples/default
 )
 
 log() {
