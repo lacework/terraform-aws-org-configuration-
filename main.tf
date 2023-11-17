@@ -1,4 +1,16 @@
 locals {
+  # Python3.9 support introduced in version 3.55.0
+  # https://github.com/hashicorp/terraform-provider-aws/blob/release/3.x/CHANGELOG.md#3550-august-19-2021
+  python_version = "python3.9"
+
+  # Python3.10 support introduced in version 4.64.0
+  # https://github.com/hashicorp/terraform-provider-aws/blob/release/4.x/CHANGELOG.md#4640-april-20-2023
+  # python_version = "python3.10"
+
+  # Python3.11 support introduced in version 5.11.0
+  # https://github.com/hashicorp/terraform-provider-aws/blob/main/CHANGELOG.md#5110-august--3-2023
+  # python_version = "python3.11"
+
   kms_key_arn   = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
   lambda_zip    = "LaceworkIntegrationSetup1.1.2.zip"
   s3_lambda_key = "${var.cf_s3_prefix}/lambda/${local.lambda_zip}"
@@ -46,18 +58,7 @@ resource "aws_lambda_function" "lacework_copy_zip_files" {
   role             = aws_iam_role.lacework_copy_zip_files_role.arn
   source_code_hash = data.archive_file.lambda_zip_file.output_base64sha256
   timeout          = 240
-
-  # Python3.9 support introduced in version 3.55.0
-  # https://github.com/hashicorp/terraform-provider-aws/blob/release/3.x/CHANGELOG.md#3550-august-19-2021
-  runtime = "python3.9"
-
-  # Python3.10 support introduced in version 4.64.0
-  # https://github.com/hashicorp/terraform-provider-aws/blob/release/4.x/CHANGELOG.md#4640-april-20-2023
-  # runtime = "python3.10"
-
-  # Python3.11 support introduced in version 5.11.0
-  # https://github.com/hashicorp/terraform-provider-aws/blob/main/CHANGELOG.md#5110-august--3-2023
-  # runtime = "python3.11"
+  runtime          = local.python_version
 
   tracing_config {
     mode = "Active"
@@ -157,18 +158,7 @@ resource "aws_lambda_function" "lacework_setup_function" {
   s3_bucket     = aws_s3_bucket.lacework_org_lambda.bucket
   s3_key        = local.s3_lambda_key
   timeout       = 900
-
-  # Python3.9 support introduced in version 3.55.0
-  # https://github.com/hashicorp/terraform-provider-aws/blob/release/3.x/CHANGELOG.md#3550-august-19-2021
-  runtime = "python3.9"
-
-  # Python3.10 support introduced in version 4.64.0
-  # https://github.com/hashicorp/terraform-provider-aws/blob/release/4.x/CHANGELOG.md#4640-april-20-2023
-  # runtime = "python3.10"
-
-  # Python3.11 support introduced in version 5.11.0
-  # https://github.com/hashicorp/terraform-provider-aws/blob/main/CHANGELOG.md#5110-august--3-2023
-  # runtime = "python3.11"
+  runtime       = local.python_version
 
   tracing_config {
     mode = "Active"
