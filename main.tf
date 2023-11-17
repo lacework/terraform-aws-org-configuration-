@@ -1,4 +1,16 @@
 locals {
+  # Python3.9 support introduced in version 3.55.0
+  # https://github.com/hashicorp/terraform-provider-aws/blob/release/3.x/CHANGELOG.md#3550-august-19-2021
+  python_version = "python3.9"
+
+  # Python3.10 support introduced in version 4.64.0
+  # https://github.com/hashicorp/terraform-provider-aws/blob/release/4.x/CHANGELOG.md#4640-april-20-2023
+  # python_version = "python3.10"
+
+  # Python3.11 support introduced in version 5.11.0
+  # https://github.com/hashicorp/terraform-provider-aws/blob/main/CHANGELOG.md#5110-august--3-2023
+  # python_version = "python3.11"
+
   kms_key_arn   = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
   lambda_zip    = "LaceworkIntegrationSetup1.1.2.zip"
   s3_lambda_key = "${var.cf_s3_prefix}/lambda/${local.lambda_zip}"
@@ -44,9 +56,9 @@ resource "aws_lambda_function" "lacework_copy_zip_files" {
   function_name    = "lacework_copy_zip_files"
   handler          = "index.handler"
   role             = aws_iam_role.lacework_copy_zip_files_role.arn
-  runtime          = "python3.11"
   source_code_hash = data.archive_file.lambda_zip_file.output_base64sha256
   timeout          = 240
+  runtime          = local.python_version
 
   tracing_config {
     mode = "Active"
@@ -143,10 +155,10 @@ resource "aws_lambda_function" "lacework_setup_function" {
   function_name = "lacework_setup_function"
   handler       = "lw_integration_lambda_function.handler"
   role          = aws_iam_role.lacework_setup_function_role.arn
-  runtime       = "python3.11"
   s3_bucket     = aws_s3_bucket.lacework_org_lambda.bucket
   s3_key        = local.s3_lambda_key
   timeout       = 900
+  runtime       = local.python_version
 
   tracing_config {
     mode = "Active"
@@ -326,8 +338,7 @@ resource "aws_cloudformation_stack" "lacework_stack" {
   }
   template_url       = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
   timeout_in_minutes = 30
-
-  depends_on = [ // depending on all this ensures the stack can be torn down
+  depends_on = [ // depending on all this ensures the stackinstances can be torn down properly
     aws_s3_bucket.lacework_org_lambda,
     aws_sns_topic.lacework_sns_topic,
     aws_sns_topic_subscription.lacework_sns_subscription,
@@ -353,22 +364,19 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
     ignore_changes = [administration_role_arn]
   }
 
-  operation_preferences {
-    failure_tolerance_count   = 20
-    max_concurrent_percentage = 100
-  }
-
   parameters = {
     LaceworkAccount    = var.lacework_account
     MainAccountSNS     = aws_sns_topic.lacework_sns_topic.arn
     ResourceNamePrefix = var.cf_resource_prefix
   }
 
+  managed_execution {
+    active = var.stackset_managed_execution
+  }
+
   permission_model = "SERVICE_MANAGED"
   template_url     = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
-
-
-  depends_on = [ // depending on all this ensures the stackinstances can be torn down
+  depends_on = [ // depending on all this ensures the stackinstances can be torn down properly
     aws_s3_bucket.lacework_org_lambda,
     aws_sns_topic.lacework_sns_topic,
     aws_sns_topic_subscription.lacework_sns_subscription,
@@ -386,6 +394,21 @@ resource "aws_cloudformation_stack_set_instance" "lacework_stackset_instances" {
     organizational_unit_ids = var.organization_unit
   }
 
+  operation_preferences {
+    failure_tolerance_count = var.stackset_failure_tolerance_count
+    max_concurrent_count    = var.stackset_max_concurrent_count
+    region_concurrency_type = var.stackset_region_concurrency_type
+  }
+
   region         = data.aws_region.current.name
   stack_set_name = aws_cloudformation_stack_set.lacework_stackset.name
+  depends_on = [ // depending on all this ensures the stackinstances can be torn down properly
+    aws_s3_bucket.lacework_org_lambda,
+    aws_sns_topic.lacework_sns_topic,
+    aws_sns_topic_subscription.lacework_sns_subscription,
+    aws_sns_topic_policy.default,
+    aws_lambda_permission.lacework_lambda_permission,
+    aws_secretsmanager_secret.lacework_api_credentials,
+    aws_lambda_function.lacework_setup_function
+  ]
 }

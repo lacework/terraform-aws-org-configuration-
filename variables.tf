@@ -95,3 +95,27 @@ variable "kms_key_multi_region" {
   default     = true
   description = "Whether the KMS key is a multi-region or regional key"
 }
+
+variable "stackset_max_concurrent_count" {
+  type        = number
+  default     = 50
+  description = "The maximum number of AWS accounts to deploy to concurrently"
+}
+
+variable "stackset_failure_tolerance_count" {
+  type        = number
+  default     = 5
+  description = "The maxiumum number of failed AWS account integrations to tolerate"
+}
+
+variable "stackset_region_concurrency_type" {
+  type        = string
+  default     = "PARALLEL"
+  description = "Allow stackset instance deployment to run in parallel"
+}
+
+variable "stackset_managed_execution" {
+  type        = bool
+  default     = true
+  description = "Allow StackSets to perform non-conflicting operations concurrently and queues conflicting operations."
+}

@@ -12,14 +12,14 @@ Terraform module for configuring an integration with Lacework and AWS for cloud 
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 0.14 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.35.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.55.0 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
 | <a name="provider_archive"></a> [archive](#provider\_archive) | n/a |
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.35.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.55.0 |
 
 ## Modules
 
@@ -77,6 +77,10 @@ No modules.
 | <a name="input_lacework_subaccount"></a> [lacework\_subaccount](#input\_lacework\_subaccount) | If Lacework Organizations is enabled, enter the sub-account.  Leave blank if Lacework Organizations is not enabled. | `string` | `""` | no |
 | <a name="input_organization_id"></a> [organization\_id](#input\_organization\_id) | AWS Organization ID where these resources are being deployed into | `string` | n/a | yes |
 | <a name="input_organization_unit"></a> [organization\_unit](#input\_organization\_unit) | Organizational Unit ID that the stackset will be deployed into | `list(string)` | n/a | yes |
+| <a name="input_stackset_failure_tolerance_count"></a> [stackset\_failure\_tolerance\_count](#input\_stackset\_failure\_tolerance\_count) | The maxiumum number of failed AWS account integrations to tolerate | `number` | `5` | no |
+| <a name="input_stackset_managed_execution"></a> [stackset\_managed\_execution](#input\_stackset\_managed\_execution) | Allow StackSets to perform non-conflicting operations concurrently and queues conflicting operations. | `bool` | `true` | no |
+| <a name="input_stackset_max_concurrent_count"></a> [stackset\_max\_concurrent\_count](#input\_stackset\_max\_concurrent\_count) | The maximum number of AWS accounts to deploy to concurrently | `number` | `50` | no |
+| <a name="input_stackset_region_concurrency_type"></a> [stackset\_region\_concurrency\_type](#input\_stackset\_region\_concurrency\_type) | Allow stackset instance deployment to run in parallel | `string` | `"PARALLEL"` | no |
 
 ## Outputs
 
