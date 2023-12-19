@@ -228,7 +228,6 @@ resource "aws_lambda_permission" "lacework_lambda_permission" {
 resource "aws_secretsmanager_secret" "lacework_api_credentials" {
   description             = "Lacework API Access Keys"
   kms_key_id              = local.kms_key_arn
-  name                    = "LaceworkApiCredentials"
   recovery_window_in_days = 0
 }
 
@@ -335,6 +334,7 @@ resource "aws_cloudformation_stack" "lacework_stack" {
     LaceworkAccount    = var.lacework_account
     MainAccountSNS     = aws_sns_topic.lacework_sns_topic.arn
     ResourceNamePrefix = var.cf_resource_prefix
+    SecretArn          = aws_secretsmanager_secret.lacework_api_credentials.id
   }
   template_url       = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
   timeout_in_minutes = 30
@@ -359,7 +359,7 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
   name         = var.cf_stack_name
 
   // GROW-2584: Workaround due to https://github.com/hashicorp/terraform-provider-aws/issues/23464
-  //            this block can be removed if there is a solution created for 23464 
+  //            this block can be removed if there is a solution created for 23464
   lifecycle {
     ignore_changes = [administration_role_arn]
   }
@@ -368,6 +368,7 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
     LaceworkAccount    = var.lacework_account
     MainAccountSNS     = aws_sns_topic.lacework_sns_topic.arn
     ResourceNamePrefix = var.cf_resource_prefix
+    SecretArn          = aws_secretsmanager_secret.lacework_api_credentials.id
   }
 
   managed_execution {
