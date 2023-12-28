@@ -14,6 +14,7 @@ locals {
   kms_key_arn   = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
   lambda_zip    = "LaceworkIntegrationSetup1.1.2.zip"
   s3_lambda_key = "${var.cf_s3_prefix}/lambda/${local.lambda_zip}"
+  template_url  = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/1.0.0/lacework-aws-cfg-member.template.yml"
 }
 
 data "aws_caller_identity" "current" {}
@@ -336,7 +337,7 @@ resource "aws_cloudformation_stack" "lacework_stack" {
     ResourceNamePrefix = var.cf_resource_prefix
     SecretArn          = aws_secretsmanager_secret.lacework_api_credentials.id
   }
-  template_url       = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
+  template_url       = local.template_url
   timeout_in_minutes = 30
   depends_on = [ // depending on all this ensures the stackinstances can be torn down properly
     aws_s3_bucket.lacework_org_lambda,
@@ -376,7 +377,7 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
   }
 
   permission_model = "SERVICE_MANAGED"
-  template_url     = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/lacework-aws-cfg-member.template.yml"
+  template_url = local.template_url
   depends_on = [ // depending on all this ensures the stackinstances can be torn down properly
     aws_s3_bucket.lacework_org_lambda,
     aws_sns_topic.lacework_sns_topic,
