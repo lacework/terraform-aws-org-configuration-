@@ -15,6 +15,9 @@ locals {
   lambda_zip    = "LaceworkIntegrationSetup1.1.3.zip"
   s3_lambda_key = "${var.cf_s3_prefix}/lambda/${local.lambda_zip}"
   template_url  = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/1.0.0/lacework-aws-cfg-member.template.yml"
+  version_file   = "${abspath(path.module)}/VERSION"
+  module_name    = basename(abspath(path.module))
+  module_version = fileexists(local.version_file) ? file(local.version_file) : ""  
 }
 
 data "aws_caller_identity" "current" {}
@@ -413,4 +416,9 @@ resource "aws_cloudformation_stack_set_instance" "lacework_stackset_instances" {
     aws_secretsmanager_secret.lacework_api_credentials,
     aws_lambda_function.lacework_setup_function
   ]
+}
+
+data "lacework_metric_module" "lwmetrics" {
+  name    = local.module_name
+  version = local.module_version
 }
