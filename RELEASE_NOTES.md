@@ -1,5 +1,5 @@
 # Release Notes
-Another day, another release. These are the release notes for the version `v0.1.2`.
+Another day, another release. These are the release notes for the version `v1.0.0`.
 
 ## Other Changes
 * chore: add lacework_metric_module datasource (Darren Murray)([8c09421](https://github.com/lacework/terraform-aws-org-configuration/commit/8c0942147216bf61b71e9105c950d0fdfda23120))
