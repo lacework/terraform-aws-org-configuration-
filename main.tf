@@ -16,7 +16,7 @@ locals {
   s3_lambda_key = "${var.cf_s3_prefix}/lambda/${local.lambda_zip}"
   template_url  = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/1.0.0/lacework-aws-cfg-member.template.yml"
   version_file   = "${abspath(path.module)}/VERSION"
-  module_name    = basename(abspath(path.module))
+  module_name    = "terraform-aws-org-configuration"
   module_version = fileexists(local.version_file) ? file(local.version_file) : ""  
 }
 
