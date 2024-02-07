@@ -119,3 +119,9 @@ variable "stackset_managed_execution" {
   default     = true
   description = "Allow StackSets to perform non-conflicting operations concurrently and queues conflicting operations."
 }
+
+variable "tags" {
+  type        = map(string)
+  description = "A map/dictionary of Tags to be assigned to created resources"
+  default     = {}
+}

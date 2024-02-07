@@ -28,6 +28,7 @@ data "aws_caller_identity" "current" {}
 resource "aws_s3_bucket" "lacework_org_lambda" {
   bucket_prefix = "lacework-org-lambda-"
   force_destroy = true
+  tags = var.tags 
 }
 
 resource "aws_s3_bucket_versioning" "lacework_org_lambda" {
@@ -63,6 +64,7 @@ resource "aws_lambda_function" "lacework_copy_zip_files" {
   source_code_hash = data.archive_file.lambda_zip_file.output_base64sha256
   timeout          = 240
   runtime          = local.python_version
+  tags             = var.tags
 
   tracing_config {
     mode = "Active"
@@ -87,6 +89,7 @@ data "archive_file" "lambda_zip_file" {
 
 resource "aws_iam_role" "lacework_copy_zip_files_role" {
   assume_role_policy = data.aws_iam_policy_document.lacework_copy_zip_files_assume_role.json
+  tags               = var.tags
 
   inline_policy {
     name   = "zip-role"
@@ -148,6 +151,8 @@ resource "aws_lambda_invocation" "lacework_copy_zip_files" {
 
 resource "aws_lambda_function" "lacework_setup_function" {
   description = "Sends HTTP requests to Lacework APIs to manage integrations"
+  tags        = var.tags
+
   environment {
     variables = {
       LW_ACCOUNT    = var.lacework_account
@@ -177,6 +182,7 @@ resource "aws_lambda_function" "lacework_setup_function" {
 
 resource "aws_iam_role" "lacework_setup_function_role" {
   assume_role_policy = data.aws_iam_policy_document.lacework_setup_function_assume_role.json
+  tags               = var.tags
 
   inline_policy {
     name   = "lacework_setup_function_policy"
@@ -233,6 +239,7 @@ resource "aws_secretsmanager_secret" "lacework_api_credentials" {
   description             = "Lacework API Access Keys"
   kms_key_id              = local.kms_key_arn
   recovery_window_in_days = 0
+  tags                    = var.tags
 }
 
 resource "aws_secretsmanager_secret_version" "lacework_api_credentials" {
@@ -243,6 +250,7 @@ resource "aws_secretsmanager_secret_version" "lacework_api_credentials" {
 resource "aws_sns_topic" "lacework_sns_topic" {
   name              = "lacework_sns_topic"
   kms_master_key_id = local.kms_key_arn
+  tags              = var.tags
 }
 
 #tfsec:ignore:aws-kms-auto-rotate-keys customer has option of enabling key rotation
@@ -253,6 +261,7 @@ resource "aws_kms_key" "lacework_kms_key" {
   multi_region            = var.kms_key_multi_region
   policy                  = data.aws_iam_policy_document.kms_key_policy.json
   enable_key_rotation     = var.kms_key_rotation
+  tags                    = var.tags
 }
 
 data "aws_iam_policy_document" "kms_key_policy" {
@@ -334,6 +343,8 @@ resource "aws_sns_topic_subscription" "lacework_sns_subscription" {
 resource "aws_cloudformation_stack" "lacework_stack" {
   capabilities = ["CAPABILITY_NAMED_IAM"]
   name         = var.cf_stack_name
+  tags         = var.tags
+
   parameters = {
     LaceworkAccount    = var.lacework_account
     MainAccountSNS     = aws_sns_topic.lacework_sns_topic.arn
@@ -380,7 +391,9 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
   }
 
   permission_model = "SERVICE_MANAGED"
-  template_url = local.template_url
+  template_url     = local.template_url
+  tags             = var.tags
+
   depends_on = [ // depending on all this ensures the stackinstances can be torn down properly
     aws_s3_bucket.lacework_org_lambda,
     aws_sns_topic.lacework_sns_topic,
