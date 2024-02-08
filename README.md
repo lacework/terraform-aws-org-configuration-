@@ -84,6 +84,7 @@ No modules.
 | <a name="input_stackset_managed_execution"></a> [stackset\_managed\_execution](#input\_stackset\_managed\_execution) | Allow StackSets to perform non-conflicting operations concurrently and queues conflicting operations. | `bool` | `true` | no |
 | <a name="input_stackset_max_concurrent_count"></a> [stackset\_max\_concurrent\_count](#input\_stackset\_max\_concurrent\_count) | The maximum number of AWS accounts to deploy to concurrently | `number` | `50` | no |
 | <a name="input_stackset_region_concurrency_type"></a> [stackset\_region\_concurrency\_type](#input\_stackset\_region\_concurrency\_type) | Allow stackset instance deployment to run in parallel | `string` | `"PARALLEL"` | no |
+| <a name="input_tags"></a> [tags](#input\_tags) | A map/dictionary of Tags to be assigned to created resources | `map(string)` | `{}` | no |
 
 ## Outputs
 
