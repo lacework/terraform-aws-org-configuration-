@@ -1,6 +1,7 @@
 # Release Notes
-Another day, another release. These are the release notes for the version `v1.0.1`.
+Another day, another release. These are the release notes for the version `v1.1.0`.
 
+## Features
+* feat: support user-supplied tags (#21) (Matt Cadorette)([9d89e57](https://github.com/lacework/terraform-aws-org-configuration/commit/9d89e57413857f8af78e7cd4dee4d7354037c43f))
 ## Other Changes
-* chore: set local var module name (#19) (Darren)([44de944](https://github.com/lacework/terraform-aws-org-configuration/commit/44de9442551bad24df128317cbeb2312ea5f7489))
-* ci: version bump to v1.0.1-dev (Lacework)([e27798e](https://github.com/lacework/terraform-aws-org-configuration/commit/e27798e3df0d3b016df34d7f23ebe2ff2388af9b))
+* ci: version bump to v1.0.2-dev (Lacework)([5944770](https://github.com/lacework/terraform-aws-org-configuration/commit/59447704fa4278483b31f6ec9ce2d0dafa7a813e))
