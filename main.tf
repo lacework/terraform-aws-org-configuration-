@@ -14,13 +14,15 @@ locals {
   kms_key_arn   = length(var.kms_key_arn) > 0 ? var.kms_key_arn : aws_kms_key.lacework_kms_key[0].arn
   lambda_zip    = "LaceworkIntegrationSetup1.1.3.zip"
   s3_lambda_key = "${var.cf_s3_prefix}/lambda/${local.lambda_zip}"
-  template_url  = "https://s3.amazonaws.com/${var.cf_s3_bucket}/${var.cf_s3_prefix}/templates/1.0.0/lacework-aws-cfg-member.template.yml"
+  template_url  = "https://${var.cf_s3_bucket}.s3.${data.aws_region.current.name}.amazonaws.com/${var.cf_s3_prefix}/templates/1.0.0/lacework-aws-cfg-member.template.yml"
   version_file   = "${abspath(path.module)}/VERSION"
   module_name    = "terraform-aws-org-configuration"
   module_version = fileexists(local.version_file) ? file(local.version_file) : ""  
 }
 
 data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
 
 #tfsec:ignore:aws-s3-enable-bucket-encryption
 #tfsec:ignore:aws-s3-enable-bucket-logging
@@ -405,8 +407,6 @@ resource "aws_cloudformation_stack_set" "lacework_stackset" {
   ]
 }
 
-
-data "aws_region" "current" {}
 resource "aws_cloudformation_stack_set_instance" "lacework_stackset_instances" {
   deployment_targets {
     organizational_unit_ids = var.organization_unit
